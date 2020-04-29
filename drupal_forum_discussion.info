@@ -1,4 +1,6 @@
 name="Fossee"
-description="It is a Drupal 7 Module for Forum discussion for a post. "
+description="It is a Drupal 7 Module for Forum discussion for a post. ."
 core=7.x
 
+; Add The Js File to The Module
+scripts[] = js/display.js
