@@ -1,0 +1,281 @@
+<?php
+
+function drupal_forum_discussion_menu(){
+    $arr = array();
+    $arr['forum'] = array(
+        'title'=>"Discussion",
+        "description" => "Drupal Forum Discussion",
+        "page callback" => "discussion_view",
+        "access callback"=> true
+    );
+   
+     return $arr;
+}
+
+function discussion_view(){
+     global $user;
+    if(in_array('anonymous user',$user->roles)){
+        return drupal_get_form("login_required");
+    }
+    return drupal_get_form("discussion_login");
+}
+
+
+function login_required( $form,&$formState )
+{
+    drupal_set_message(t('You have to first login to access.'), 'warning');
+    
+    drupal_goto("/user");
+}
+
+
+
+function discussion_login($form,&$formState ){
+   
+    $form['topic'] = array(
+        '#type'=>'textfield',
+        '#title'=>t('Topic'),
+        '#size'=>50,
+        '#maxlength'=>100,
+        '#required'=>true
+    );  
+     // TextField
+    $form['post'] = array(
+        '#type'=>'textfield',
+        '#title'=>t('Post'),
+        '#size'=>50,
+        '#maxlength'=>500,
+        '#required'=>true
+    );
+   
+ // The Post Button
+    $form['post_b'] = array(
+        '#type'=>'submit',
+        '#value'=>t('POST'),
+        '#ajax' => array(
+           'callback' =>'post_save'
+        )
+    );
+ 
+  // The Display All Button
+     $form['displayallsubmition'] = array(
+        '#type'=>'submit',
+        '#value'=>t('Display ALL post'),
+        '#ajax' => array(
+            'callback' =>'post_all',
+            'wrapper' => 'display_files'
+            )
+    );    
+
+    // A Div to Display the Results
+    $form['display_files']=array(
+        '#type'=>'markup',
+        '#prefix'=>'<div id="display_files">',    
+        '#suffix'=>'</div>'
+    ); 
+    // A Div to Display the Results
+    $form['save_div']=array(
+        '#type'=>'markup',
+        '#prefix'=>'<div id="save_div">',
+        '#suffix'=>'</div>'
+    );
+return $form;
+  
+  
+}
+
+function post_save($form,&$formState){
+    global $user;
+    $message = "Post Can't Be Saved"; // message variable to be Printed
+    $data = array(); // The row field variable to store values 
+   
+    if(db_table_exists('tab1')){
+        $query = db_query('SELECT * FROM tab1');
+        $rows1 = $query->fetchall();
+    } 
+  
+    $data['id'] = count($rows1)+1;
+    $data['user_na'] =  $user->name;
+    $data['topic_q'] = $formState['values']['topic'];
+    $data['post'] = $formState['values']['post'];
+  
+      /// Check Wether the post is not empty
+    $is_empty = false;
+   
+    foreach($data as $d)
+        if(is_string($d) && empty($d))
+            $is_empty = true;
+  
+  
+      // if table exist and post is not empty then add the data to the database
+    if(!$is_empty && db_table_exists('tab1')){
+        $query = db_insert('tab1');
+        $query->fields($data)->execute();
+        $message = 'Post Saved'; // Change the message to data is saved
+    }
+    // Call the Javascript function to Display data
+    $commands[] = ajax_command_invoke(NULL,"diplaySave",array('<strong>'.$message.'</strong>'));
+    return array('#type'=>'ajax','#commands'=>$commands);
+}
+
+
+
+
+      
+
+
+function post_all($form,&$formState){
+    return drupal_get_form("post_feed");
+}
+
+
+
+
+
+function post_feed($form,&$formState){
+ 
+    if(db_table_exists('tab1')){
+        $query = db_query('SELECT * FROM tab1');
+        $rows1 = $query->fetchall(); 
+                                                                              
+            for($i = 0;$i < count($rows1);$i++){
+                $row1 = $rows1[$i];
+                $form['stu_open'.$i]=array(
+                    '#type'=>'markup',
+                    '#prefix'=>'<tr><td><h2><mark>'.$row1->topic_q.'</mark></h2></td><td><h3>'.$row1->post.'</h3></td><h5>-'.$row1->user_na.'</h5><br>',       
+                );        
+                 $form['stu_feedbak'.$i]=array(
+                 '#type'=>'textfield',
+                    '#prefix'=>'<td>',    
+                    '#suffix'=>'</td>',
+                    '#default_value'=> $row1->feedback 
+                );        
+                
+           //     $formState['new_id']=11;
+              //  $form['new_id'.$i]=array(
+              //    '#value'=>$formState['values']['id'.$i],
+              //   );
+                
+                 $form['save_btn'.$i] = array(
+                    '#type'=>'submit',
+                    '#value'=>t('save'),
+                    '#ajax' => array(
+                    'callback' =>'comment_save',
+                    'wrapper' => 'display_files'
+                    )
+                );
+
+                
+                $form['stu_close'.$i]=array(
+                    '#type'=>'markup',
+                    '#suffix'=>'<hr style="border: 1px solid red;" /></tr>'   
+                );  
+
+
+
+                 $query = db_query('SELECT * FROM tab2 WHERE nid = (:val)',array(':val'=>$formState['values']['id'.$i]));
+                 $rows2 = $query->fetchall(); 
+                  
+                  
+                  
+                    for($j = 0;$j < count($rows2);$j++){
+                         $row2 = $rows2[$j];
+                         $form['stu_open'.$j]=array(
+                        '#type'=>'markup',
+                         '#prefix'=>'<tr><td>     '.$rows2->comment.'</td>',    
+                       );        
+                      
+                         $form['stu_close'.$j]=array(
+                           '#type'=>'markup',
+                           '#suffix'=>'</tr>'   
+                       );  
+                          
+
+                    }
+           }
+        
+    }
+    return $form;
+}
+
+
+function  commasaent_save($form,$formState){
+   global $user;
+   
+    $message = "Post Can't Be Saved"; // message variable to be Printed
+
+    $feed = array(); // The row field variable to store values 
+    $feed['comment'] = $formState['values']['stu_feedbak'];
+    $feed['user_n'] =  $user->name; 
+    $feed['qid'] =  (int)$formState['values']['new_id'];
+
+     $is_empty = false;
+    
+      foreach($feed as $d)
+        if(is_string($d) && empty($d))
+            $is_empty = true;
+  
+  
+   
+    if(!$is_empty && db_table_exists('tab2')){
+        $query = db_insert('tab2');
+        $query->fields($feed)->execute();
+        $message = 'Post Saved'; // Change the message to data is saved
+    }
+    // Call the Javascript function to Display data
+   $commands[] = ajax_command_invoke(NULL,"diplaySave",array('<strong>'.$message.'</strong>'));
+   return array('#type'=>'ajax','#commands'=>$commands);
+
+
+
+  //  return $form;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function post_asdsaall($form,&$formState){
+global $user;
+ $out = ''; // Function to store output html
+    // Check Wether Table exist or not
+    if(db_table_exists('tab1')){
+        /// Fetch the Data from The Database
+        $query = db_query('SELECT * FROM {tab1}');
+        $rows = $query->fetchall();
+        // if There is no data print a message.
+        if(count($rows) < 1) $out = '<b> No Results </b>';
+        else{
+
+          
+            foreach($rows as $row){
+               
+                 $out .= '<br><tr>Post::<td>';
+              $out .=  $row->topic_q.'</td><td>';
+               $out .= '<br><tr>user::<td>';
+                $out .=  $row->user_na.'</td><td>';
+               $out .=  '<hr style="border: 1px solid black;" />';
+                
+            }
+            $out .= '</table>';
+        }
+    }else $out = '<b>Post Not Found :( </b>';
+    // Call the Javascript funtion to display the Data
+    $commands[] = ajax_command_invoke(NULL,"diplaySave",array($out));
+    return array('#type'=>'ajax','#commands'=>$commands);
+}
