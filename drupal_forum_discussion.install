@@ -1,0 +1,74 @@
+<?php
+
+
+function drupal_forum_discussion_install(){
+   
+    $schema['tab1']= array(
+        'description'=>'Table to store data for forum discussion.',
+        'fields'=>array(
+            
+            
+            'user_na'=>array(
+                'description'=>'user id',
+                'type'=>'char',
+                'length'=>30,
+            ),
+            'topic_q'=>array(
+                'description'=>'Topic name',
+                'type'=>'char',
+                'length'=>100,
+            ),
+            'post'=>array(
+                'description'=>'Post',
+                'type'=>'char',
+                'length'=>100,
+
+            ),
+           'id'=>array(
+                'description'=>'Question id',
+                'type'=>'int'
+            ),
+        ),
+        
+        # 'primary key'=>array('id'),
+        # 'foreign keys'=> array(
+        #     'q_nid'=>array(
+        #         'tab1' => 'node',
+        #      'columns' => array('id' => 'nid'),
+        #     ),
+        # ),
+    );
+       $schema['tab2']= array(
+        'description'=>'Table to store data for forum discussion.',
+        'fields'=>array(
+            
+            
+            'nid'=>array(
+                'description'=>'question ID',
+                'type'=>'int',
+                
+            ),
+            'comment'=>array(
+                'description'=>'comment',
+                'type'=>'char',
+                'length'=>100,
+            ),
+            'user_n'=>array(
+                'description'=>'User name',
+                'type'=>'char',
+                'length'=>100,
+
+            ),
+        ),   
+        
+    );
+    
+
+      if(!db_table_exists('tab1'))
+        db_create_table('tab1',$schema);
+    
+
+    // check if table not exist then add the table
+    if(!db_table_exists('tab2'))
+        db_create_table('tab2',$schema);
+}
